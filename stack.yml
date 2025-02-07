@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  mqtt_broker:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883" 
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - mqtt_net
+
+  generator:
+    image: generator_image
+    depends_on:
+      - mqtt_broker
+    networks:
+      - mqtt_net
+    env_file:
+      - .env
+
+  adaptor:
+    image: adaptor_image
+    env_file:
+      - .env
+    depends_on:
+      - mqtt_broker
+      - influxdb
+    networks:
+      - mqtt_net  
+      - db_net    
+
+  influxdb:
+    image: influxdb:2.7
+    env_file:
+      - .env
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - db_net    
+      - viz_net   
+
+  grafana:
+    image: grafana/grafana:latest
+    env_file:
+      - .env
+    ports:
+      - "80:3000" 
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - viz_net  
+
+networks:
+  mqtt_net:
+    driver: overlay
+  db_net:
+    driver: overlay
+  viz_net:
+    driver: overlay
+
+volumes:
+  influxdb_data:
+  grafana_data:
